@@ -73,7 +73,7 @@ def pois_from_poi_file(poiFile):
 
 if __name__ == '__main__':
     params = docopt(__doc__, version='0.1')
-    print params
+    # print params
 
     radius = float(params['--radius'])
     maxResults = float(params['--maxResults'])
