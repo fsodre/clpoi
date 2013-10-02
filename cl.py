@@ -1,11 +1,26 @@
 """
+This is script fetches results from a search for apartments at craigslist and filters them
+to show results that are close to a given list of points of interest, which are given in an
+external file using the following format:
+
+Point of interest name 1
+latitude1 longitude1
+Point of interest name 2
+latitude2 longitude2
+Point of interest name 3
+latitude3 longitude3
+...
+
+Author: Felipe Sodre (fsodre@gmail.com)
+License: as is
+
 Usage:
   cl.py <poi_file> <query> [options]
   cl.py -h
 
  Arguments:
   <poi_file>     Points of Interest file. Ex: poi.txt
-  <query>        CIty or area to search. Ex: Sunnyvale
+  <query>        City or area to search. Ex: Sunnyvale
 
  Options:
   -h --help                  Show this help
@@ -17,21 +32,6 @@ Usage:
   --hasPic=<0|1>             1 to show only entries with pictures [default: 1]
   -r --radius=<r>            maximun distance of the apartments from your points of interest (in kilometers). [default: 0.5]
 """
-
-# This is script fetches results from a search for apartments at craigslist and filters them
-# to show results that are close to a given list of points of interest, which are given in an
-# external file using the following format:
-#
-# Point of interest name # 1
-# latitude1 longitude1
-# Point of interest name # 2
-# latitude2 longitude2
-# Point of interest name # 3
-# latitude3 longitude3
-# ...
-#
-# Author: Felipe Sodre (fsodre@gmail.com)
-# License: as is
 
 from docopt import docopt
 from math import sin, cos, atan2, sqrt, radians
@@ -94,21 +94,36 @@ if __name__ == '__main__':
     # Searches results on craigslis
     count = 0
     pages = 0
+
     while count < maxResults:
       url = 'http://%s.craigslist.org/search/apa?s=%d&%s' % (clprefix, pages * 100, urllib.urlencode(url_params))
       response = urllib2.urlopen(url)
       html = response.read()
 
       hasResults = False
-
+      
       for entry in re.finditer('<p class="row" data-latitude="([^"]+)" data-longitude="([^"]+)".+?href="([^"]+).+?"date">([^<]+).+?html">([^<]+).+?price">([^<]+).+?small>([^<]+)', html, re.DOTALL):
         hasResults = True
         latlng = (float(entry.group(1)), float(entry.group(2)))
         obj = (latlng, entry.group(3), " ".join([entry.group(i) for i in xrange(4,8)]))
 
+        poiToAdd = (None, 1e500)
+
         for (name, pos, entries) in pois:
-          if distance(latlng, pos) < radius + 1e-100:
-            entries.append(obj)
+          thisDistance = distance(latlng, pos)
+
+          # Using 10-meter tolerance
+          if thisDistance < radius + 1e-2:
+
+            # Make sure an entry is associated only to the closest POI
+            (entryList, dist) = poiToAdd
+            if dist > thisDistance:
+              poiToAdd = (entries, thisDistance)
+
+        (entryList, dist) = poiToAdd
+
+        if entryList is not None:
+          entryList.append(obj)
 
         count += 1
 
