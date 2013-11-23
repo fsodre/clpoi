@@ -115,31 +115,28 @@ if __name__ == '__main__':
         for entry in re.finditer(
                 ('<p class="row" data-latitude="([^"]+)" data-longitude='
                  '"([^"]+)".+?href="([^"]+).+?"date">([^<]+).+?html">([^<]+)'
-                 '.+?price">([^<]+).+?small>([^<]+)', html, re.DOTALL)):
+                 '.+?price">([^<]+).+?small>([^<]+)'), html, re.DOTALL):
             hasResults = True
             latlng = (float(entry.group(1)), float(entry.group(2)))
-            obj = (latlng, entry.group(3), " ".join([entry.group(i)
-                                                     for i in xrange(4, 8)]))
+            obj = (latlng, entry.group(3), " ".join([entry.group(i) for i in xrange(4, 8)]))
 
-        poiToAdd = (None, 1e500)
+            poiToAdd = (None, 1e500)
 
-        for (name, pos, entries) in pois:
-            thisDistance = distance(latlng, pos)
+            for (name, pos, entries) in pois:
+                thisDistance = distance(latlng, pos)
+                # Using 10-meter tolerance
+                if thisDistance < radius + 1e-2:
+                    # Make sure an entry is associated only to the closest POI
+                    (entryList, dist) = poiToAdd
+                    if dist > thisDistance:
+                        poiToAdd = (entries, thisDistance)
 
-            # Using 10-meter tolerance
-            if thisDistance < radius + 1e-2:
+            (entryList, dist) = poiToAdd
 
-                # Make sure an entry is associated only to the closest POI
-                (entryList, dist) = poiToAdd
-                if dist > thisDistance:
-                    poiToAdd = (entries, thisDistance)
+            if entryList is not None:
+                entryList.append(obj)
 
-        (entryList, dist) = poiToAdd
-
-        if entryList is not None:
-            entryList.append(obj)
-
-        count += 1
+            count += 1
 
         # Let's not abuse craigslist :)
         time.sleep(1)
